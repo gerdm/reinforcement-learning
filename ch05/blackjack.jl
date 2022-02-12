@@ -89,7 +89,7 @@ end
 Return the reward when one of the players has value greater than
 21
 """
-function evaluate_loss(dealer_value, player_value)
+function evaluate_reward(dealer_value, player_value)
     if dealer_value > 21 && player_value > 21
         reward = 0
     elseif dealer_value > 21 && player_value <= 21
@@ -159,7 +159,7 @@ function blackjack_step(state, dealer_value, policy)
         end_of_game = true
     # One of the players has value above 21
     elseif dealer_value > 21 || player_val > 21
-        reward = evaluate_loss(dealer_value, player_val)
+        reward = evaluate_reward(dealer_value, player_val)
         end_of_game = true
     # No player wants to hit
     elseif dealer_value >= 17 && !hit_player
@@ -180,7 +180,6 @@ function blackjack_step(state, dealer_value, policy)
     
     new_state = [player_val, usable_ace, dealer_card]
     return new_state, dealer_value, reward, hit_player, end_of_game
-    
 end
 
 
