@@ -57,7 +57,6 @@ Returns
 function init_state()
     init_cards = draw_cards(2)
     has_usable_ace = any(1 .∈ init_cards)
-    
     value_cards = sum(init_cards) + 10 * has_usable_ace
     
     while value_cards < 12
@@ -105,7 +104,7 @@ function take_action(policy, state)
     player_val, usable_ace, dealer_card = state
     
     usable_ace = Bool(usable_ace) # Whether player hold a usable ace
-    player_ix = player_val - 11 # From value card to index in policy grid
+    player_ix = min(player_val - 11, 11) # From value card to index in policy grid
     ace_ix = usable_ace + 1 # From bool to index in policy grid
 
     
@@ -137,13 +136,15 @@ policy array(10, 2, 10)
     2. Action values: hit, stick
     3. Dealer's one-showing card: 1, ..., 10
 """
-function blackjack_step(state, dealer_value, policy)
+function blackjack_step(state, dealer_value, policy, random_take=false)
     # end_of_game = false
     reward = 0
     player_val, usable_ace, dealer_card = state
     usable_ace = Bool(usable_ace) # Whether player hold a usable ace
     
-    hit_player = Bool(take_action(policy, state)) # the action
+    # hit_player = Bool(take_action(policy, state)) # the action
+    hit_player = random_take == true ? rand(0:1) : take_action(policy, state) 
+    hit_player = Bool(hit_player)
         
     # ** End states **
     # It's a draw
@@ -223,12 +224,23 @@ Simulate a game of blackjack assuming that the probabilities
 of the initial value of the player, whether or not the player
 has an ace, and the dealer's one showing card are all independent 
 and uniformly-distributed.
+
+# Parameters
+----------
+* policy
+
+# Returns
+---------
+
 """
 function blackjack_exploring_starts(policy)
     eog = false # end-of-game
     reward = 0
-    state = [rand(12:22); rand(0:1); rand(1:10)]
-    dealer_value = rand(12:21)
+    state = [rand(12:22); # value of player
+             rand(0:1);   # whether player has usable ace
+             rand(1:10)   # dealer's one-showing card
+             ]
+    dealer_value = rand(12:22)
     
     # Entries in game_hist are as follows
     #     1. Reward at that state-action pair. The
@@ -236,10 +248,14 @@ function blackjack_exploring_starts(policy)
     #        it at the end of the game
     #     2. state: current state of the game
     #     3. dealer_value: Total value of the dealer
+    #     4. Reward obtained at the end of the step
     game_hist = [-1; state; dealer_value; 0][newx, :]
 
+    # First action is chosen randomly with uniform probability
+    random_action_choice = true
     while !eog
-        state, dealer_value, reward, action, eog = blackjack_step(state, dealer_value, policy)
+        state, dealer_value, reward, action, eog = blackjack_step(state, dealer_value, policy, random_action_choice)
+        random_action_choice = false
         new_step = [action; state; dealer_value; reward][newx, :]
         if !eog
             game_hist = vcat(game_hist, new_step)
