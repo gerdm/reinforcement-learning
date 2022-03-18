@@ -59,7 +59,7 @@ function init_state()
     has_usable_ace = any(1 .∈ init_cards)
     value_cards = sum(init_cards) + 10 * has_usable_ace
     
-    while value_cards < 12
+    while value_cards <= 12
         value_cards, has_usable_ace = update_value_cards(value_cards, has_usable_ace)
     end
     
@@ -103,7 +103,7 @@ end
 function take_action(policy, state)
     player_val, usable_ace, dealer_card = state
     
-    usable_ace = Bool(usable_ace) # Whether player hold a usable ace
+    usable_ace = Bool(usable_ace) # Whether player holds a usable ace
     player_ix = min(player_val - 11, 11) # From value card to index in policy grid
     ace_ix = usable_ace + 1 # From bool to index in policy grid
 
@@ -136,16 +136,16 @@ policy array(10, 2, 10)
     2. Action values: hit, stick
     3. Dealer's one-showing card: 1, ..., 10
 """
-function blackjack_step(state, dealer_value, policy, random_take=false)
-    # end_of_game = false
+function blackjack_step(last_step, policy, random_take=false)
+    prev_action, player_val, usable_ace, dealer_card, dealer_value, reward = last_step
+    state = [player_val, usable_ace, dealer_card]
     reward = 0
-    player_val, usable_ace, dealer_card = state
     usable_ace = Bool(usable_ace) # Whether player hold a usable ace
     
     # hit_player = Bool(take_action(policy, state)) # the action
-    hit_player = random_take == true ? rand(0:1) : take_action(policy, state) 
-    hit_player = Bool(hit_player)
-        
+    hit_player = random_take == true ? rand(0:1) : take_action(policy, state)
+    hit_player = Bool(hit_player * prev_action)
+
     # ** End states **
     # It's a draw
     if player_val == dealer_value == 21
@@ -243,28 +243,32 @@ function blackjack_exploring_starts(policy)
     dealer_value = rand(12:22)
     
     # Entries in game_hist are as follows
-    #     1. Reward at that state-action pair. The
-    #        initial value -1 is a dummy one. We drop
-    #        it at the end of the game
+    #     1. Action
     #     2. state: current state of the game
+    #         2.1 player's card value
+    #         2.2 player has usable ace (bool)
+    #         2.3 dealer's one-showing card
     #     3. dealer_value: Total value of the dealer
-    #     4. Reward obtained at the end of the step
-    game_hist = [-1; state; dealer_value; 0][newx, :]
+    #     4. Reward obtained at the end of the step. initial value
+    #        is -1. We drop it at the end of the game
+    game_hist = [1; state; dealer_value; 0][newx, :]
 
     # First action is chosen randomly with uniform probability
     random_action_choice = true
+    final_action = 0
     while !eog
-        state, dealer_value, reward, action, eog = blackjack_step(state, dealer_value, policy, random_action_choice)
+        state, dealer_value, reward, action, eog = blackjack_step(game_hist[end, :], policy, random_action_choice)
         random_action_choice = false
         new_step = [action; state; dealer_value; reward][newx, :]
         if !eog
             game_hist = vcat(game_hist, new_step)
         end
+        final_action = action
     end
     # offsetting rewards one place back
     game_hist[:, end] = [game_hist[2:end, end]; reward]
     # offsetting actions
-    final_action = take_action(policy, state)
+    final_action = take_action(policy, state) * final_action
     game_hist[:, 1] = [game_hist[2:end, 1]; final_action]
     
     return game_hist, reward

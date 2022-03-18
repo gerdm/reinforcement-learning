@@ -23,7 +23,7 @@ for _ in 1:500_000
         action, player_val, ace_val, dealer_card, _, reward = row
         G = G + reward
         
-        player_ix = player_val - 11
+        player_ix = min(player_val - 11, 11)
         ace_ix = ace_val + 1
         dealer_ix = dealer_card
 
