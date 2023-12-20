@@ -20,7 +20,7 @@ def set_seed(value):
 
 @njit
 def draw_card():
-    return np.random.multinomial(1, DECK_PROBS).argmax() + 1
+    return np.random.choice(CARD_MAX) + CARD_MIN
 
 
 @njit
@@ -44,7 +44,7 @@ def compute_reward(value_cards_player, value_cards_dealer):
 @njit
 def init_game():
     value_cards_player = np.array([draw_card(), draw_card()])
-    has_usable_ace = 1 in value_cards_player
+    has_usable_ace = (1 in value_cards_player) * 1
     value_cards_player = value_cards_player.sum() + 10 * has_usable_ace
     
     dealers_card = draw_card() # Dealer's one-showing card
@@ -91,8 +91,9 @@ def step_player(
     # turn into indices
     ixs = state_to_ix(value_cards_player, has_usable_ace, dealers_card)
     ix_value_cards, ix_has_usable_ace, ix_dealers_card = ixs
-    action = policy[ix_value_cards, ix_has_usable_ace, ix_dealers_card].argmax()
-    
+    proba_actions = policy[ix_value_cards, ix_has_usable_ace, ix_dealers_card]
+    action = np.random.multinomial(1, proba_actions).argmax()
+
     if action == 1:
         value_cards_player, has_usable_ace_new = update_hand(value_cards_player)
         has_usable_ace = has_usable_ace or has_usable_ace_new
@@ -173,7 +174,7 @@ def single_first_visit_mc(policy):
     player_value_cards, ace, dealer_card = init_game()
         
     reward, values, hist = play_single_hist(player_value_cards, ace, dealer_card, policy=policy)
-    hist_state, _, hist_reward = hist
+    hist_state, hist_actions, hist_reward = hist
     T = len(hist_state)
 
     elements = []
@@ -181,6 +182,7 @@ def single_first_visit_mc(policy):
     for t in range(-1, -(T + 1), -1):
         sim_reward = DISCOUNT * sim_reward + hist_reward[t]
         current_state = hist_state[t]
+        current_action = hist_actions[t]
         previous_states = hist_state[:t]
         value_cards_player, has_usable_ace, dealers_card = current_state
         
@@ -188,7 +190,27 @@ def single_first_visit_mc(policy):
         if first_visit:
             ixs = state_to_ix(value_cards_player, has_usable_ace, dealers_card)
                         
-            element = (ixs, sim_reward)
+            element = (ixs, sim_reward, current_action)
             elements.append(element)
         
     return elements
+
+
+@njit(parallel=True)
+def first_visit_mc_eval(policy, n_sims):
+    grid_rewards = np.zeros(policy.shape[:-1])
+    grid_count = np.zeros(policy.shape[:-1])
+    
+    for s in prange(n_sims):
+        hits = single_first_visit_mc(policy)
+        for element in hits:
+            ixs, sim_reward, _ = element
+            ix_value_cards, ix_has_usable_ace, ix_dealers_card = ixs
+            if (ix_value_cards + PLAY_MINVAL) > 21:
+                continue
+                        
+            grid_rewards[ix_value_cards, ix_has_usable_ace, ix_dealers_card] += sim_reward
+            grid_count[ix_value_cards, ix_has_usable_ace, ix_dealers_card] += 1
+
+    
+    return grid_rewards, grid_count
