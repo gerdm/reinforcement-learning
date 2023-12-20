@@ -25,7 +25,9 @@ def draw_card():
 
 @njit
 def compute_reward(value_cards_player, value_cards_dealer):
-    if value_cards_player == value_cards_dealer == 21:
+    if value_cards_player == 21:
+        return 1 # win
+    elif value_cards_player == value_cards_dealer == 21:
         reward = 0 # draw
     elif value_cards_player > 21:
         reward = -1 # lose
@@ -98,7 +100,7 @@ def step_player(
         value_cards_player, has_usable_ace_new = update_hand(value_cards_player)
         has_usable_ace = has_usable_ace or has_usable_ace_new
         
-    if (value_cards_player >= 21) or (action == 0):
+    if (value_cards_player > 21) or (action == 0):
         continue_play = False
     
     return value_cards_player, has_usable_ace, action, continue_play
@@ -193,7 +195,7 @@ def single_first_visit_mc(policy):
             element = (ixs, sim_reward, current_action)
             elements.append(element)
         
-    return elements
+    return elements, values, reward
 
 
 @njit(parallel=True)
@@ -202,7 +204,7 @@ def first_visit_mc_eval(policy, n_sims):
     grid_count = np.zeros(policy.shape[:-1])
     
     for s in prange(n_sims):
-        hits = single_first_visit_mc(policy)
+        hits, _, _ = single_first_visit_mc(policy)
         for element in hits:
             ixs, sim_reward, _ = element
             ix_value_cards, ix_has_usable_ace, ix_dealers_card = ixs
