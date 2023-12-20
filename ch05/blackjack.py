@@ -1,6 +1,7 @@
 import numpy as np
 from numba import njit, prange
 
+DISCOUNT = 1.0
 CARD_MIN = 1
 CARD_MAX = 10
 PLAY_MINVAL = 2
@@ -90,7 +91,7 @@ def step_player(
     # turn into indices
     ixs = state_to_ix(value_cards_player, has_usable_ace, dealers_card)
     ix_value_cards, ix_has_usable_ace, ix_dealers_card = ixs
-    action = policy[ix_value_cards, ix_has_usable_ace, ix_dealers_card]
+    action = policy[ix_value_cards, ix_has_usable_ace, ix_dealers_card].argmax()
     
     if action == 1:
         value_cards_player, has_usable_ace_new = update_hand(value_cards_player)
@@ -165,3 +166,29 @@ def play_single_hist(value_cards_player, has_usable_ace, dealers_card, policy):
     )
     
     return reward, (value_cards_player, value_cards_dealer), hist
+
+
+@njit
+def single_first_visit_mc(policy):    
+    player_value_cards, ace, dealer_card = init_game()
+        
+    reward, values, hist = play_single_hist(player_value_cards, ace, dealer_card, policy=policy)
+    hist_state, _, hist_reward = hist
+    T = len(hist_state)
+
+    elements = []
+    sim_reward = 0
+    for t in range(-1, -(T + 1), -1):
+        sim_reward = DISCOUNT * sim_reward + hist_reward[t]
+        current_state = hist_state[t]
+        previous_states = hist_state[:t]
+        value_cards_player, has_usable_ace, dealers_card = current_state
+        
+        first_visit = current_state not in previous_states
+        if first_visit:
+            ixs = state_to_ix(value_cards_player, has_usable_ace, dealers_card)
+                        
+            element = (ixs, sim_reward)
+            elements.append(element)
+        
+    return elements
