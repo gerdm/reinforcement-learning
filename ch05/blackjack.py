@@ -55,6 +55,18 @@ def init_game():
 
 
 @njit
+def init_game_es():
+    """
+    Initialize the game for the exploring starts method
+    """
+    value_cards_player = 12 + np.random.choice(10) # 12-21
+    has_usable_ace = np.random.choice(2) # 0 or 1
+    dealers_card = np.random.choice(10) + 1 # 1-10
+    
+    return value_cards_player, has_usable_ace, dealers_card
+
+
+@njit
 def update_hand(value_cards):
     """
     Update the value of the hand for either the player
@@ -172,8 +184,11 @@ def play_single_hist(value_cards_player, has_usable_ace, dealers_card, policy):
 
 
 @njit
-def single_first_visit_mc(policy):    
-    player_value_cards, ace, dealer_card = init_game()
+def single_first_visit_mc(policy, exploring_starts=False):    
+    if exploring_starts:
+        player_value_cards, ace, dealer_card = init_game_es()
+    else:
+        player_value_cards, ace, dealer_card = init_game()
         
     reward, values, hist = play_single_hist(player_value_cards, ace, dealer_card, policy=policy)
     hist_state, hist_actions, hist_reward = hist
@@ -199,12 +214,12 @@ def single_first_visit_mc(policy):
 
 
 @njit(parallel=True)
-def first_visit_mc_eval(policy, n_sims):
+def first_visit_mc_eval(policy, n_sims, exploring_starts=False):
     grid_rewards = np.zeros(policy.shape[:-1])
     grid_count = np.zeros(policy.shape[:-1])
     
     for s in prange(n_sims):
-        hits, _, _ = single_first_visit_mc(policy)
+        hits, _, _ = single_first_visit_mc(policy, exploring_starts=exploring_starts)
         for element in hits:
             ixs, sim_reward, _ = element
             ix_value_cards, ix_has_usable_ace, ix_dealers_card = ixs
