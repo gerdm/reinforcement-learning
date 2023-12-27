@@ -4,7 +4,7 @@ from numba import njit, prange
 DISCOUNT = 1.0
 CARD_MIN = 1
 CARD_MAX = 10
-PLAY_MINVAL = 2
+PLAY_MINVAL = 4
 PLAY_MAXVAL = 21
 DECK_PROBS = np.ones(10) / 10 # Sampled from "infinite" deck
 
@@ -73,12 +73,12 @@ def update_hand(value_cards):
     or the dealer
     """
     new_card = draw_card()
-    has_usable_ace = False
     
     if (new_card == 1) and (value_cards <= 10):
         has_usable_ace = True
         value_cards = value_cards + 11 # Make use of the ace
     else:
+        has_usable_ace = False
         value_cards = value_cards + new_card
 
     return value_cards, has_usable_ace
