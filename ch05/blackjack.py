@@ -7,8 +7,7 @@ CARD_MAX = 10
 PLAY_MINVAL = 4
 PLAY_MAXVAL = 21
 DECK_PROBS = np.ones(10) / 10 # Sampled from "infinite" deck
-
-
+DECK = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10])
 
 @njit
 def set_seed(value):
@@ -20,16 +19,19 @@ def set_seed(value):
 
 @njit
 def draw_card():
-    return np.random.choice(CARD_MAX) + CARD_MIN
+    card = np.random.choice(DECK)
+    return card
+
+
+@njit
+def draw_card_uniform():
+    card = np.random.choice(np.arange(CARD_MIN, CARD_MAX + 1))
+    return card
 
 
 @njit
 def compute_reward(value_cards_player, value_cards_dealer):
-    if value_cards_player == 21:
-        return 1 # win
-    elif value_cards_player == value_cards_dealer == 21:
-        reward = 0 # draw
-    elif value_cards_player > 21:
+    if value_cards_player > 21:
         reward = -1 # lose
     elif value_cards_dealer > 21:
         reward = 1 # win
@@ -59,9 +61,11 @@ def init_game_es():
     """
     Initialize the game for the exploring starts method
     """
-    value_cards_player = 12 + np.random.choice(10) # 12-21
-    has_usable_ace = np.random.choice(2) # 0 or 1
-    dealers_card = np.random.choice(10) + 1 # 1-10
+    value_cards_player = np.array([draw_card_uniform(), draw_card_uniform()])
+    has_usable_ace = (1 in value_cards_player) * 1
+    value_cards_player = value_cards_player.sum() + 10 * has_usable_ace
+    
+    dealers_card = draw_card_uniform() # Dealer's one-showing card
     
     return value_cards_player, has_usable_ace, dealers_card
 
@@ -73,6 +77,9 @@ def update_hand(value_cards):
     or the dealer
     """
     new_card = draw_card()
+    
+    if value_cards == 1:
+        value_cards = 11 # Make use of the ace
     
     if (new_card == 1) and (value_cards <= 10):
         has_usable_ace = True
