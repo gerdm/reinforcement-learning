@@ -6,7 +6,6 @@ CARD_MIN = 1
 CARD_MAX = 10
 PLAY_MINVAL = 4
 PLAY_MAXVAL = 21
-DECK_PROBS = np.ones(10) / 10 # Sampled from "infinite" deck
 DECK = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10])
 
 @njit
@@ -37,10 +36,10 @@ def compute_reward(value_cards_player, value_cards_dealer):
         reward = 1 # win
     elif value_cards_player == value_cards_dealer:
         reward = 0 # draw
-    elif value_cards_player > value_cards_dealer:
-        reward = 1 # win
-    else:
+    elif value_cards_player < value_cards_dealer:
         reward = -1 # lose
+    else:
+        reward = 1 # win
     
     return reward
 
@@ -61,9 +60,9 @@ def init_game_es():
     """
     Initialize the game for the exploring starts method
     """
-    value_cards_player = np.array([draw_card_uniform(), draw_card_uniform()])
-    has_usable_ace = (1 in value_cards_player) * 1
-    value_cards_player = value_cards_player.sum() + 10 * has_usable_ace
+    # value_cards_player = np.array([draw_card_uniform(), draw_card_uniform()])
+    value_cards_player = np.random.choice(np.arange(11, 22))
+    has_usable_ace = np.random.choice(np.array([0, 1]))
     
     dealers_card = draw_card_uniform() # Dealer's one-showing card
     
@@ -78,10 +77,10 @@ def update_hand(value_cards):
     """
     new_card = draw_card()
     
-    if value_cards == 1:
+    if value_cards == 1: # if dealer starts with an ace
         value_cards = 11 # Make use of the ace
-    
-    if (new_card == 1) and (value_cards <= 10):
+        has_usable_ace = True
+    elif (new_card == 1) and (value_cards <= 10):
         has_usable_ace = True
         value_cards = value_cards + 11 # Make use of the ace
     else:
@@ -119,7 +118,7 @@ def step_player(
         value_cards_player, has_usable_ace_new = update_hand(value_cards_player)
         has_usable_ace = has_usable_ace or has_usable_ace_new
         
-    if (value_cards_player > 21) or (action == 0):
+    if (value_cards_player >= 21) or (action == 0):
         continue_play = False
     
     return value_cards_player, has_usable_ace, action, continue_play
@@ -131,7 +130,7 @@ def dealer_strategy(dealers_card):
     The dealer hits or sticks according to a fixed strategy:
     Stick on any sum of 17 or greater and hit otherwise
     """
-    value_cards_dealer = dealers_card + 10 * (dealers_card == 1)
+    value_cards_dealer = dealers_card
     while value_cards_dealer < 17:
         value_cards_dealer, _ = update_hand(value_cards_dealer)
         
