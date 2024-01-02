@@ -8,6 +8,12 @@ PLAY_MINVAL = 4
 PLAY_MAXVAL = 21
 DECK = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10])
 
+
+@njit
+def clip(a, a_min, a_max):
+    return np.minimum(a_max, np.maximum(a, a_min))
+
+
 @njit
 def set_seed(value):
     """
@@ -61,8 +67,11 @@ def init_game_es():
     Initialize the game for the exploring starts method
     """
     # value_cards_player = np.array([draw_card_uniform(), draw_card_uniform()])
-    value_cards_player = np.random.choice(np.arange(11, 22))
+    value_cards_player = np.random.choice(np.arange(4, 22))
     has_usable_ace = np.random.choice(np.array([0, 1]))
+
+    if has_usable_ace == 1 and value_cards_player <= 10:
+        value_cards_player += 11
     
     dealers_card = draw_card_uniform() # Dealer's one-showing card
     
@@ -92,7 +101,7 @@ def update_hand(value_cards):
 
 @njit
 def state_to_ix(value_cards_player, has_usable_ace, dealers_card):
-    ix_value_cards = value_cards_player - PLAY_MINVAL
+    ix_value_cards = clip(value_cards_player - PLAY_MINVAL, 0, PLAY_MAXVAL - PLAY_MINVAL)
     ix_has_usable_ace = int(has_usable_ace)
     ix_dealers_card = dealers_card - CARD_MIN
     
@@ -208,6 +217,10 @@ def single_first_visit_mc(policy, exploring_starts=False):
         current_action = hist_actions[t]
         previous_states = hist_state[:t]
         value_cards_player, has_usable_ace, dealers_card = current_state
+        
+        if value_cards_player > 21:
+            # print("Bug")
+            continue
         
         first_visit = current_state not in previous_states
         if first_visit:
