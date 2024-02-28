@@ -9,16 +9,18 @@ spec = [
     ("n_rows", int32),
     ("n_cols", int32),
     ("n_states", int32),
+    ("reward_goal", float32),
 ]
 
 @jitclass(spec)
 class Gridworld:
-    def __init__(self, ix_start, ix_goal, n_rows, n_cols):
+    def __init__(self, ix_start, ix_goal, n_rows, n_cols, reward_goal):
         self.ix_start = ix_start
         self.ix_goal = ix_goal
         self.n_rows = n_rows
         self.n_cols = n_cols
         self.n_states = n_rows * n_cols
+        self.reward_goal = reward_goal
 
     
     @property
@@ -78,10 +80,9 @@ class Gridworld:
 
 
     def move_and_reward(self, ix, step):
-        reward_goal = 20
         ix_new = self.move(ix, step)
 
-        reward = -1 if ix != self.ix_goal else reward_goal
+        reward = -1 if ix != self.ix_goal else self.reward_goal
         ix_new = ix_new if ix != self.ix_goal else self.ix_start
         
         return ix_new, reward
