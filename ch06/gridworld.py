@@ -13,7 +13,7 @@ spec = [
 ]
 
 @jitclass(spec)
-class Gridworld:
+class WindyGridworld:
     def __init__(self, ix_start, ix_goal, n_rows, n_cols, reward_goal):
         self.ix_start = ix_start
         self.ix_goal = ix_goal
