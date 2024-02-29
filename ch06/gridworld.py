@@ -42,6 +42,12 @@ class Gridworld:
 
 
     def move_pos(self, pos, step):
+        """
+        pos: np.array([row, col])
+            current position
+        step: np.array([slide_row, slide_col])
+            offset to move pos
+        """
         row, col = pos
         row_next, col_next = pos + step
         
