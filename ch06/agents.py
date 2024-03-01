@@ -22,7 +22,7 @@ def get_probas(qval, epsilon):
         # Random selection in unvisited states
         n_equal = sum(mask)
         probas = epsilon * np.ones(n_actions) /  n_actions
-        probas = ((1 - epsilon) / n_actions + epsilon) * mask +  probas * (1 - mask)
+        probas = ((1 - epsilon) / n_equal + epsilon / n_actions) * mask +  probas * (1 - mask)
     else:
         # Epsilon-greedy state
         action_max = qval.argmax()
