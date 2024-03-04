@@ -92,3 +92,77 @@ class WindyGridworld:
         ix_new = ix_new if ix != self.ix_goal else self.ix_start
         
         return ix_new, reward
+
+
+@jitclass(spec)
+class CliffGridworld:
+    def __init__(self, ix_start, ix_goal, n_rows, n_cols, reward_goal):
+        self.ix_start = ix_start
+        self.ix_goal = ix_goal
+        self.n_rows = n_rows
+        self.n_cols = n_cols
+        self.n_states = n_rows * n_cols
+        self.reward_goal = reward_goal
+    
+    @property
+    def map_ix(self):
+        return  np.arange(self.n_states, dtype=np.int32).reshape(self.n_rows, self.n_cols)
+    
+    def get_pos(self, ix):
+        row = ix // self.n_cols
+        col = ix % self.n_cols
+        pos = np.array([row, col])
+        return pos
+
+    def get_ix(self, pos):
+        row, col = pos
+        ix = row * self.n_cols + col
+        return ix
+
+    def move_pos(self, pos, step):
+        """
+        pos: np.array([row, col])
+            current position
+        step: np.array([slide_row, slide_col])
+            offset to move pos
+        """
+        row, col = pos
+        row_next, col_next = pos + step
+        
+        if (row_next < 0) or (row_next >= self.n_rows):
+            row_next = row
+        if (col_next < 0) or (col_next >= self.n_cols):
+            col_next = col
+        
+        pos_next = np.array([row_next, col_next])
+        return pos_next
+    
+    def is_out_of_bounds(self, pos):
+        row, col = pos
+        if (row == self.n_rows - 1) and (col > 0) and (col < self.n_cols - 1):
+            return True
+        else:
+            return False
+
+    def move(self, ix, step):
+        pos = self.get_pos(ix)
+        pos_new = self.move_pos(pos, step)
+
+        oob = self.is_out_of_bounds(pos_new)
+        ix_new = self.get_ix(pos_new)
+        return ix_new, oob
+
+
+    def move_and_reward(self, ix, step):
+        ix_new, oob = self.move(ix, step)
+
+        if oob:
+            reward = -100
+            ix_new = self.ix_start
+        elif ix != self.ix_goal:
+            reward = -1
+        else:
+            reward = self.reward_goal
+            ix_new = self.ix_start
+
+        return ix_new, reward
