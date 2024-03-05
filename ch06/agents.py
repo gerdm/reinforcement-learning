@@ -56,6 +56,16 @@ def sarsa_step(s, a, Q, epsilon, alpha, gamma, gridworld, movements):
 
 
 @njit
+def sarsa_step_and_update(
+    s, a, Q, epsilon, alpha, gamma, gridworld, movements
+):
+    Q = Q.copy()
+    (r, s_new, a_new), q_new = sarsa_step(s, a, Q, epsilon, alpha, gamma, gridworld, movements)
+    Q[s, a] = q_new
+    return (r, s_new, a_new), Q
+
+
+@njit
 def qlearning_step(s, Q, epsilon, alpha, gamma, gridworld, movements):
     """
     :Q-learning step:
@@ -71,12 +81,27 @@ def qlearning_step(s, Q, epsilon, alpha, gamma, gridworld, movements):
     return (r, s_new, a), q_new
 
 
+@njit
+def qlearning_step_and_update(
+    s, a_prev, Q, epsilon, alpha, gamma, gridworld, movements
+):
+    """
+    Note: a_prev is not used in the function,
+    but it is included for compatibility with the SARSA function
+    """
+    Q = Q.copy()
+    (r, s_new, a), q_new = qlearning_step(s, Q, epsilon, alpha, gamma, gridworld, movements)
+    Q[s, a] = q_new
+    return (r, s_new, a), Q
 
-def run_agent_sarsa(
+
+
+def run_agent(
         ix_init,
         gridworld, n_actions, n_steps,
         epsilon, alpha, gamma, movements,
-        seed=314
+        step_and_update_fn,
+        seed=314, 
 ):
     Q = np.zeros((gridworld.n_states, n_actions))
     
@@ -88,9 +113,7 @@ def run_agent_sarsa(
 
     for n in range(n_steps):
         set_seed(seed + n)
-        (r, ix_new, action_new), q_new = sarsa_step(ix, action, Q, epsilon, alpha, gamma, gridworld, movements)
-        Q[ix, action] = q_new
-        ix, action = ix_new, action_new
+        (r, ix, action), Q = step_and_update_fn(ix, action, Q, epsilon, alpha, gamma, gridworld, movements)
 
         ix_hist.append(ix)
         action_hist.append(action)
@@ -106,39 +129,3 @@ def run_agent_sarsa(
         "reward": reward_hist,
     }
     return hist, Q
-
-
-def run_agent_qlearning(
-        ix_init,
-        gridworld, n_actions, n_steps,
-        epsilon, alpha, gamma, movements,
-        seed=314
-):
-    Q = np.zeros((gridworld.n_states, n_actions))
-    
-    ix = ix_init
-    ix_hist = [ix]
-    action_hist = []
-    reward_hist = []
-
-    for n in range(n_steps):
-        set_seed(seed + n)
-        (r, ix_new, action), q_new = qlearning_step(ix, Q, epsilon, alpha, gamma, gridworld, movements)
-        Q[ix, action] = q_new
-        ix = ix_new
-
-        ix_hist.append(ix)
-        action_hist.append(action)
-        reward_hist.append(r)
-    
-    ix_hist = np.array(ix_hist)
-    action_hist = np.array(action_hist)
-    reward_hist = np.array(reward_hist)
-
-    hist = {
-        "ix": ix_hist,
-        "action": action_hist,
-        "reward": reward_hist,
-    }
-    return hist, Q
-
