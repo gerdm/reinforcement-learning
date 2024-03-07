@@ -66,6 +66,34 @@ def sarsa_step_and_update(
 
 
 @njit
+def expected_sarsa_step(s, Q, epsilon, alpha, gamma, gridworld, movements):
+    """
+    :Expected SARSA step:
+    s -> a -> (s_new, r_new)
+    """
+    # choose action 'a' based on Q and 's'
+    a = choose_action(s, Q, epsilon)
+    step = movements[a]
+    # observe 'r' and 's_new'
+    s_new, r = gridworld.move_and_reward(s, step)
+
+    # Expected value of Q[s_new, :]
+    probas = get_probas(Q[s_new], epsilon)
+    q_new = Q[s, a] + alpha * (r + gamma * (probas * Q[s_new, :]).sum() - Q[s, a])
+    return (r, s_new, a), q_new
+
+
+@njit
+def expected_sarsa_step_and_update(
+    s, a, Q, epsilon, alpha, gamma, gridworld, movements
+):
+    Q = Q.copy()
+    (r, s_new, a), q_new = expected_sarsa_step(s, Q, epsilon, alpha, gamma, gridworld, movements)
+    Q[s, a] = q_new
+    return (r, s_new, a), Q
+
+
+@njit
 def qlearning_step(s, Q, epsilon, alpha, gamma, gridworld, movements):
     """
     :Q-learning step:
@@ -93,7 +121,6 @@ def qlearning_step_and_update(
     (r, s_new, a), q_new = qlearning_step(s, Q, epsilon, alpha, gamma, gridworld, movements)
     Q[s, a] = q_new
     return (r, s_new, a), Q
-
 
 
 def run_agent(
