@@ -128,10 +128,10 @@ def run_agent(
         gridworld, n_actions, n_steps,
         epsilon, alpha, gamma, movements,
         step_and_update_fn,
-        seed=314, 
+        seed=314,
 ):
     Q = np.zeros((gridworld.n_states, n_actions))
-    
+
     ix = ix_init
     ix_hist = [ix]
     action = choose_action(ix, Q, epsilon)
@@ -145,7 +145,7 @@ def run_agent(
         ix_hist.append(ix)
         action_hist.append(action)
         reward_hist.append(r)
-    
+
     ix_hist = np.array(ix_hist)
     action_hist = np.array(action_hist)
     reward_hist = np.array(reward_hist)
@@ -156,3 +156,41 @@ def run_agent(
         "reward": reward_hist,
     }
     return hist, Q
+
+
+@njit
+def run_agent_return(
+    ix_init,
+    gridworld, n_actions, n_episodes,
+    epsilon, alpha, gamma, movements,
+    step_and_update_fn,
+    seed=314,
+):
+    """
+    Run the agent until it reaches the goal n_episodes times
+    and return the total reward for each episode and the final Q-value function
+    """
+    Q = np.zeros((gridworld.n_states, n_actions))
+    ix = ix_init
+    action = choose_action(ix, Q, epsilon)
+
+    return_hist = np.zeros(n_episodes)
+
+    t, n = 0, 0
+    episode_return = 0.0
+    while True:
+        set_seed(seed + t)
+        (reward, ix, action), Q = step_and_update_fn(ix, action, Q, epsilon, alpha, gamma, gridworld, movements)
+
+        episode_return += reward
+        # if gridworld.is_goal(ix) # TODO: refactor to this
+        if reward == gridworld.reward_goal:
+            return_hist[n] = episode_return
+            n = n + 1
+            episode_return = 0.0
+
+            if n == n_episodes:
+                break
+
+        t = t + 1
+    return return_hist, Q
