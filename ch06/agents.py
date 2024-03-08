@@ -1,5 +1,5 @@
 import numpy as np
-from numba import njit
+from numba import njit, prange
 
 @njit
 def set_seed(seed):
@@ -194,3 +194,19 @@ def run_agent_return(
 
         t = t + 1
     return return_hist, Q
+
+
+
+@njit(parallel=True)
+def simulations_run_agent_return(
+    ix_init, gridworld, n_actions, n_episodes, epsilon, alpha, gamma, movements, step_and_update_fn,
+    n_simulations=100, seed=314,
+):
+    return_hist = np.zeros((n_simulations, n_episodes))
+    for s in prange(n_simulations):
+        return_hist[s], _ = run_agent_return(
+            ix_init, gridworld, n_actions, n_episodes,
+            epsilon, alpha, gamma, movements, step_and_update_fn,
+            seed=seed + s
+        )
+    return return_hist
