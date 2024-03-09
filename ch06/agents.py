@@ -56,16 +56,6 @@ def sarsa_step(s, a, Q, epsilon, alpha, gamma, gridworld, movements):
 
 
 @njit
-def sarsa_step_and_update(
-    s, a, Q, epsilon, alpha, gamma, gridworld, movements
-):
-    Q = Q.copy()
-    (r, s_new, a_new), q_new = sarsa_step(s, a, Q, epsilon, alpha, gamma, gridworld, movements)
-    Q[s, a] = q_new
-    return (r, s_new, a_new), Q
-
-
-@njit
 def expected_sarsa_step(s, Q, epsilon, alpha, gamma, gridworld, movements):
     """
     :Expected SARSA step:
@@ -84,16 +74,6 @@ def expected_sarsa_step(s, Q, epsilon, alpha, gamma, gridworld, movements):
 
 
 @njit
-def expected_sarsa_step_and_update(
-    s, a, Q, epsilon, alpha, gamma, gridworld, movements
-):
-    Q = Q.copy()
-    (r, s_new, a), q_new = expected_sarsa_step(s, Q, epsilon, alpha, gamma, gridworld, movements)
-    Q[s, a] = q_new
-    return (r, s_new, a), Q
-
-
-@njit
 def qlearning_step(s, Q, epsilon, alpha, gamma, gridworld, movements):
     """
     :Q-learning step:
@@ -107,6 +87,26 @@ def qlearning_step(s, Q, epsilon, alpha, gamma, gridworld, movements):
 
     q_new = Q[s, a] + alpha * (r + gamma * Q[s_new, :].max() - Q[s, a])
     return (r, s_new, a), q_new
+
+
+@njit
+def sarsa_step_and_update(
+    s, a, Q, epsilon, alpha, gamma, gridworld, movements
+):
+    Q = Q.copy()
+    (r, s_new, a_new), q_new = sarsa_step(s, a, Q, epsilon, alpha, gamma, gridworld, movements)
+    Q[s, a] = q_new
+    return (r, s_new, a_new), Q
+
+
+@njit
+def expected_sarsa_step_and_update(
+    s, a, Q, epsilon, alpha, gamma, gridworld, movements
+):
+    Q = Q.copy()
+    (r, s_new, a), q_new = expected_sarsa_step(s, Q, epsilon, alpha, gamma, gridworld, movements)
+    Q[s, a] = q_new
+    return (r, s_new, a), Q
 
 
 @njit
