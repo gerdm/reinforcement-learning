@@ -90,6 +90,17 @@ def qlearning_step(s, Q, epsilon, alpha, gamma, gridworld, movements):
 
 
 @njit
+def double_q_learning_step(s, Qs, epsilon, alpha, gamma, gridworld, movements):
+    """
+    We have a duplicate Q-value function Qs = [Q1, Q2].
+    At each step, we flip a coin to decide which Q-value function to update and provide an estimate
+    of the action.  The other Q-value function is used to choose the action.
+    """
+    Q1, Q2 = Qs
+    ...
+
+
+@njit
 def sarsa_step_and_update(
     s, a, Q, epsilon, alpha, gamma, gridworld, movements
 ):
