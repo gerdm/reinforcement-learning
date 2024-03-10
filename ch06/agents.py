@@ -96,9 +96,18 @@ def double_q_learning_step(s, Qs, epsilon, alpha, gamma, gridworld, movements):
     At each step, we flip a coin to decide which Q-value function to update and provide an estimate
     of the action.  The other Q-value function is used to choose the action.
     """
-    Q1, Q2 = Qs
-    ...
+    iq = np.random.randint(2)
+    Q1, Q2 = Qs[iq], Qs[1 - iq]
 
+    # choose action 'a' based on Q1 and 's'
+    a = choose_action(s, Q1, epsilon)
+    step = movements[a]
+    # observe 'r' and 's_new'
+    s_new, r = gridworld.move_and_reward(s, step)
+
+    # Update Q1 using Q2 to determine the value of the action
+    q_new = Q1[s, a] + alpha * (r + gamma * Q2[s_new, Q1[s_new, :].argmax()] - Q1[s, a])
+    return (r, s_new, a), q_new, iq
 
 @njit
 def sarsa_step_and_update(
@@ -133,19 +142,37 @@ def qlearning_step_and_update(
     Q[s, a] = q_new
     return (r, s_new, a), Q
 
+@njit
+def double_q_learning_step_and_update(
+    s, a_prev, Qs, epsilon, alpha, gamma, gridworld, movements
+):
+    """
+    Note: a_prev is not used in the function,
+    but it is included for compatibility with the SARSA function
+    """
+    Qa, Qb = Qs
+    Qa, Qb = Qa.copy(), Qb.copy()
+    Qs = (Qa, Qb)
+    (r, s_new, a), q_new, iq = double_q_learning_step(s, Qs, epsilon, alpha, gamma, gridworld, movements)
+    Qs[iq][s, a] = q_new
+    return (r, s_new, a), Qs
+
 
 def run_agent(
         ix_init,
         gridworld, n_actions, n_steps,
         epsilon, alpha, gamma, movements,
         step_and_update_fn,
-        seed=314,
+        seed=314, Q=None
 ):
-    Q = np.zeros((gridworld.n_states, n_actions))
+    if Q is None:
+        Q = np.zeros((gridworld.n_states, n_actions))
 
     ix = ix_init
     ix_hist = [ix]
-    action = choose_action(ix, Q, epsilon)
+    # TODO: fix this --- don't use first action, but make it compatible with all agents
+    # action = choose_action(ix, Q, epsilon)
+    action = 0
     action_hist = [action]
     reward_hist = []
 
