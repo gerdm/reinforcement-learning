@@ -1,5 +1,5 @@
 import numpy as np
-from numba import int32, float32
+from numba import int32, float32, boolean
 from numba.experimental import jitclass
 
 
@@ -12,6 +12,11 @@ spec = [
     ("reward_goal", float32),
 ]
 
+spec_cliff = spec + [
+    ("has_noisy_reward", boolean),
+]
+
+
 @jitclass(spec)
 class WindyGridworld:
     def __init__(self, ix_start, ix_goal, n_rows, n_cols, reward_goal):
@@ -22,11 +27,11 @@ class WindyGridworld:
         self.n_states = n_rows * n_cols
         self.reward_goal = reward_goal
 
-    
+
     @property
     def map_ix(self):
         return  np.arange(self.n_states, dtype=np.int32).reshape(self.n_rows, self.n_cols)
-    
+
 
     def get_pos(self, ix):
         row = ix // self.n_cols
@@ -50,23 +55,23 @@ class WindyGridworld:
         """
         row, col = pos
         row_next, col_next = pos + step
-        
+
         if (row_next < 0) or (row_next >= self.n_rows):
             row_next = row
         if (col_next < 0) or (col_next >= self.n_cols):
             col_next = col
-        
+
         pos_next = np.array([row_next, col_next])
         return pos_next
 
     def wind_strength(self, n_row, n_col):
         c_strength = 0
-        
+
         # s = np.random.uniform() > 1/3
         if n_col in [3, 4, 5, 8]:
-            r_strength = -1 
+            r_strength = -1
         elif n_col in [6, 7]:
-            r_strength = -2 
+            r_strength = -2
         elif n_col in [1]: # optional
             r_strength = 2
         else:
@@ -90,24 +95,27 @@ class WindyGridworld:
 
         reward = -1 if ix != self.ix_goal else self.reward_goal
         ix_new = ix_new if ix != self.ix_goal else self.ix_start
-        
+
         return ix_new, reward
 
 
-@jitclass(spec)
+@jitclass(spec_cliff)
 class CliffGridworld:
-    def __init__(self, ix_start, ix_goal, n_rows, n_cols, reward_goal):
+    def __init__(
+        self, ix_start, ix_goal, n_rows, n_cols, reward_goal, has_noisy_reward=False
+    ):
         self.ix_start = ix_start
         self.ix_goal = ix_goal
         self.n_rows = n_rows
         self.n_cols = n_cols
         self.n_states = n_rows * n_cols
         self.reward_goal = reward_goal
-    
+        self.has_noisy_reward = has_noisy_reward
+
     @property
     def map_ix(self):
         return  np.arange(self.n_states, dtype=np.int32).reshape(self.n_rows, self.n_cols)
-    
+
     def get_pos(self, ix):
         row = ix // self.n_cols
         col = ix % self.n_cols
@@ -128,15 +136,15 @@ class CliffGridworld:
         """
         row, col = pos
         row_next, col_next = pos + step
-        
+
         if (row_next < 0) or (row_next >= self.n_rows):
             row_next = row
         if (col_next < 0) or (col_next >= self.n_cols):
             col_next = col
-        
+
         pos_next = np.array([row_next, col_next])
         return pos_next
-    
+
     def is_out_of_bounds(self, pos):
         row, col = pos
         if (row == self.n_rows - 1) and (col > 0) and (col < self.n_cols - 1):
@@ -153,6 +161,13 @@ class CliffGridworld:
         return ix_new, oob
 
 
+    def intermediate_reward(self):
+        if self.has_noisy_reward:
+            return np.random.normal(loc=-1, scale=3.0)
+        else:
+            return -1.0
+
+
     def move_and_reward(self, ix, step):
         ix_new, oob = self.move(ix, step)
 
@@ -160,7 +175,7 @@ class CliffGridworld:
             reward = -100
             ix_new = self.ix_start
         elif ix != self.ix_goal:
-            reward = -1
+            reward = self.intermediate_reward()
         else:
             reward = self.reward_goal
             ix_new = self.ix_start
