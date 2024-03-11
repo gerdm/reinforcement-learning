@@ -163,15 +163,15 @@ class CliffGridworld:
 
     def intermediate_reward(self):
         if self.has_noisy_reward:
-            return np.random.normal(loc=-1, scale=3.0)
+            return np.random.normal(loc=-1, scale=5.0)
         else:
             return -1.0
 
 
     def move_and_reward(self, ix, step):
-        ix_new, oob = self.move(ix, step)
+        ix_new, out_of_bounds = self.move(ix, step)
 
-        if oob:
+        if out_of_bounds:
             reward = -100
             ix_new = self.ix_start
         elif ix != self.ix_goal:
