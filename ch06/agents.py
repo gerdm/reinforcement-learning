@@ -99,9 +99,10 @@ def double_q_learning_step(s, Qs, epsilon, alpha, gamma, gridworld, movements):
     iq = np.random.randint(2)
     Q1, Q2 = Qs[iq], Qs[1 - iq]
 
-    # choose action 'a' based on Q1 and 's'
-    a = choose_action(s, Q1, epsilon)
+    # choose action 'a' based on average of Q1 and Q2 at state 's'
+    a = choose_action(s, (Q1 + Q2) / 2, epsilon)
     step = movements[a]
+
     # observe 'r' and 's_new'
     s_new, r = gridworld.move_and_reward(s, step)
 
@@ -150,11 +151,9 @@ def double_q_learning_step_and_update(
     Note: a_prev is not used in the function,
     but it is included for compatibility with the SARSA function
     """
-    Qa, Qb = Qs
-    Qa, Qb = Qa.copy(), Qb.copy()
-    Qs = (Qa, Qb)
+    Qs = Qs.copy()
     (r, s_new, a), q_new, iq = double_q_learning_step(s, Qs, epsilon, alpha, gamma, gridworld, movements)
-    Qs[iq][s, a] = q_new
+    Qs[iq, s, a] = q_new
     return (r, s_new, a), Qs
 
 
