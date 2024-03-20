@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tabrl"
+version = "0.0.1"
+description = "Tabular methods for reinforcement learning"
+readme = "README.md"
+authors = [
+    {name = "Gerardo Duran-Martin", email = "g.duran@me.com"}
+]
+
+requires-python = ">=3.10"
+
+dependencies = [
+    "numba>=0.59.0"
+]
+
+[tool.setuptools]
+py-modules = ["tabrl"]
