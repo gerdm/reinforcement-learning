@@ -1,6 +1,7 @@
 import numpy as np
 from numba import njit, prange
 
+
 @njit
 def set_seed(seed):
     return np.random.seed(seed)
@@ -110,6 +111,7 @@ def double_q_learning_step(s, Qs, epsilon, alpha, gamma, gridworld, movements):
     q_new = Q1[s, a] + alpha * (r + gamma * Q2[s_new, Q1[s_new, :].argmax()] - Q1[s, a])
     return (r, s_new, a), q_new, iq
 
+
 @njit
 def sarsa_step_and_update(
     s, a, Q, epsilon, alpha, gamma, gridworld, movements
@@ -142,6 +144,7 @@ def qlearning_step_and_update(
     (r, s_new, a), q_new = qlearning_step(s, Q, epsilon, alpha, gamma, gridworld, movements)
     Q[s, a] = q_new
     return (r, s_new, a), Q
+
 
 @njit
 def double_q_learning_step_and_update(
