@@ -46,29 +46,14 @@ env = gym.make("LunarLander-v2", render_mode="human")
 observation, info = env.reset(seed=314)
 action = eps_greedy_choice(W, observation, eps, actions)
 
-observations = []
-rewards = []
-actions_hist = []
-
 episode_reward = 0.0
-for t in range(n_steps):
+reset = False
+
+while not reset:
     observation, reward, terminated, truncated, info = env.step(action)
-    
+    episode_reward += reward
     action = eps_greedy_choice(W, observation, eps, actions)
-
     reset = terminated or truncated
-    rewards.append(reward)
-    actions_hist.append(action)
-    observations.append(observation)
-    
-    if reset:
-        observation, info = env.reset()
-        # action = eps_greedy_choice(W, observation, eps)
-        break
 
-
-observations = np.array(observations)
-rewards = np.array(rewards)
-print(*actions_hist, sep=", ")
-print(f"\n{rewards.sum()}")
+print(f"Episode reward: {episode_reward}")
 env.close()
