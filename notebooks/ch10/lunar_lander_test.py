@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 import numpy as np
 
 def phi(s):
@@ -42,7 +42,7 @@ eps = 1e-5
 W = np.load("weights.npy")
 actions = np.arange(4)
 
-env = gym.make("LunarLander-v2", render_mode="human")
+env = gym.make("LunarLander-v3", render_mode="human")
 observation, info = env.reset(seed=314)
 action = eps_greedy_choice(W, observation, eps, actions)
 
