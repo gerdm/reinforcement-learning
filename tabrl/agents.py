@@ -41,19 +41,13 @@ def choose_action(ix, Q, epsilon):
 
 
 @njit
-def sarsa_step(s, a, Q, epsilon, alpha, gamma, gridworld, movements):
+def sarsa_step(s, a, r, s_next, a_next, Q, epsilon, alpha, gamma):
     """
     SARSA step
     :(s, a) -> (r, s_new, a_new):
     """
-    # take action 'a', observe 'r' and s_new'
-    step = movements[a]
-    s_new, r = gridworld.move_and_reward(s, step)
-    # Choose 'a_new' based on Q and 's_new'
-    a_new = choose_action(s_new, Q, epsilon)
-
-    q_new = Q[s, a] + alpha * (r + gamma * Q[s_new, a_new] - Q[s, a])
-    return (r, s_new, a_new), q_new
+    q_new = Q[s, a] + alpha * (r + gamma * Q[s_next, a_next] - Q[s, a])
+    return q_new
 
 
 @njit
@@ -117,6 +111,13 @@ def sarsa_step_and_update(
     s, a, Q, epsilon, alpha, gamma, gridworld, movements
 ):
     Q = Q.copy()
+
+    # take action 'a', observe 'r' and s_new'
+    step = movements[a]
+    s_new, r = gridworld.move_and_reward(s, step)
+    # Choose 'a_new' based on Q and 's_new'
+    a_new = choose_action(s_new, Q, epsilon)
+    
     (r, s_new, a_new), q_new = sarsa_step(s, a, Q, epsilon, alpha, gamma, gridworld, movements)
     Q[s, a] = q_new
     return (r, s_new, a_new), Q
@@ -160,11 +161,20 @@ def double_q_learning_step_and_update(
     return (r, s_new, a), Qs
 
 
+def step_agent(s, a, gridworld, movements):
+    """
+    Take action 'a', observe reward 'r' and new state 's_new'
+    """
+    step = movements[a]
+    s_new, r = gridworld.move_and_reward(s, step)
+    return r, s_new
+
+
 def run_agent(
         ix_init,
         gridworld, n_actions, n_steps,
         epsilon, alpha, gamma, movements,
-        step_and_update_fn,
+        step_fn,
         seed=314, Q=None
 ):
     if Q is None:
@@ -180,12 +190,20 @@ def run_agent(
 
     for n in range(n_steps):
         set_seed(seed + n)
-        (r, ix, action), Q = step_and_update_fn(ix, action, Q, epsilon, alpha, gamma, gridworld, movements)
+        # 1. take step, obtain reward and new state
+        r, ix_new = step_agent(ix, action, gridworld, movements)
+        
+        # 2. Choose 'a_new' based on Q and 's_new'
+        action_new = choose_action(ix_new, Q, epsilon)
+    
+        # 3. Take a step fn
+        # Q = step_fn(s, a, r, s_next, a_next, Q, epsilon, alpha, gamma)
+        q_new = step_fn(ix, action, r, ix_new, action_new, Q, epsilon, alpha, gamma)
+        Q[ix, action] = q_new
+    
+        ix, action = ix_new, action_new
 
-        ix_hist.append(ix)
-        action_hist.append(action)
-        reward_hist.append(r)
-
+    
     ix_hist = np.array(ix_hist)
     action_hist = np.array(action_hist)
     reward_hist = np.array(reward_hist)
