@@ -57,41 +57,44 @@ def choose_action_double_q(ix, Qs, epsilon):
 
 
 @njit
-def sarsa_update(s, a, r, s_next, a_next, Q, epsilon, alpha, gamma):
+def sarsa_update(s, a, r, s_next, a_next, Q, alpha, gamma, epsilon):
     """
     SARSA update
     :(s, a) -> (r, s_new, a_new):
     """
-    q_next = Q[s, a] + alpha * (r + gamma * Q[s_next, a_next] - Q[s, a])
+    td_err = r + gamma * Q[s_next, a_next] - Q[s, a]
+    q_next = Q[s, a] + alpha * td_err
     Q[s, a] = q_next
     return Q
 
 
 @njit
-def expected_sarsa_update(s, a, r, s_next, a_next, Q, epsilon, alpha, gamma):
+def expected_sarsa_update(s, a, r, s_next, a_next, Q, alpha, gamma, epsilon):
     """
     Expected SARSA update
     :(s, a) -> (r, s_new, a_new):
     """
     # Expected value of Q[s_next, :]
+    td_err = r + gamma * (probas * Q[s_next, :]).sum() - Q[s, a]
     probas = get_probas(Q[s_next], epsilon)
-    q_next = Q[s, a] + alpha * (r + gamma * (probas * Q[s_next, :]).sum() - Q[s, a])
+    q_next = Q[s, a] + alpha * td_err
     Q[s, a] = q_next
     return Q
 
 
 @njit
-def qlearning_update(s, a, r, s_next, a_next, Q, epsilon, alpha, gamma):
+def qlearning_update(s, a, r, s_next, a_next, Q, alpha, gamma, epsilon):
     """
     s -> a -> (s_new, r)
     """
-    q_next = Q[s, a] + alpha * (r + gamma * Q[s_next, :].max() - Q[s, a])
+    td_err = r + gamma * Q[s_next, :].max() - Q[s, a]
+    q_next = Q[s, a] + alpha * td_err
     Q[s, a] = q_next
     return Q
 
 
 @njit
-def double_q_learning_update(s, a, r, s_next, a_next, Qs, epsilon, alpha, gamma):
+def double_q_learning_update(s, a, r, s_next, a_next, Qs, alpha, gamma, epsilon):
     """
     We have a duplicate Q-value function Qs = [Q1, Q2].
     At each update, we flip a coin to decide which Q-value function to update and provide an estimate
@@ -101,23 +104,17 @@ def double_q_learning_update(s, a, r, s_next, a_next, Qs, epsilon, alpha, gamma)
     Q1, Q2 = Qs[iq], Qs[1 - iq]
 
     # Update Q1 using Q2 to determine the value of the action
-    q_next = Q1[s, a] + alpha * (r + gamma * Q2[s_next, Q1[s_next, :].argmax()] - Q1[s, a])
+    td_err = r + gamma * Q2[s_next, Q1[s_next, :].argmax()] - Q1[s, a]
+    q_next = Q1[s, a] + alpha * td_err
     Qs[iq, s, a] = q_next
     return Qs
 
 
 @njit
-def step_agent(s, a, gridworld, movements):
-    """
-    Take action 'a', observe reward 'r' and new state 's_new'
-    """
-    step = movements[a]
-    s_new, r = gridworld.move_and_reward(s, step)
-    return r, s_new
-
-
-@njit
-def step_and_update_agent(Q, s, a, epsilon, alpha, gamma, gridworld, movements, update_fn, policy_fn):
+def step_and_update_agent(
+    Q, s, a, epsilon, alpha, gamma,
+    gridworld, movements, update_fn, policy_fn
+):
     """
     Parameters
     ---------
@@ -129,15 +126,14 @@ def step_and_update_agent(Q, s, a, epsilon, alpha, gamma, gridworld, movements, 
         discount factor
     """
     # 1. take step, obtain reward and new state
-    # (It should not depend no the ε-greedy value)
-    r, s_next = step_agent(s, a, gridworld, movements)
+    r, s_next = gridworld.step(s, a, movements)
     
     # 2. Choose 'a_new' based on Q and 's_new'
     a_next = policy_fn(s_next, Q, epsilon)
 
     # 3. Take an update of the action-value
     Q = Q.copy()
-    Q = update_fn(s, a, r, s_next, a_next, Q, epsilon, alpha, gamma)
+    Q = update_fn(s, a, r, s_next, a_next, Q, alpha, gamma, epsilon)
 
     return (s_next, a_next, r), Q
 
@@ -147,7 +143,7 @@ def run_agent(
         gridworld, n_actions, n_steps,
         epsilon, alpha, gamma, movements,
         update_fn, policy_fn=None,
-        seed=314, Q=None
+        seed=314, Q=None,
 ):
     if policy_fn is None:
         policy_fn = choose_action

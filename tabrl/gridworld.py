@@ -99,6 +99,14 @@ class WindyGridworld:
         return ix_new, reward
 
 
+    def step(self, ix, action, movements):
+        """
+        Custom step based on a list of movements
+        """
+        step = movements[action]
+        ix_new, reward = self.move_and_reward(ix, step)
+        return reward, ix_new
+
 @jitclass(spec_cliff)
 class CliffGridworld:
     def __init__(
@@ -181,3 +189,12 @@ class CliffGridworld:
             ix_new = self.ix_start
 
         return ix_new, reward
+
+
+    def step(self, ix, action, movements):
+        """
+        Custom step based on a list of movements
+        """
+        step = movements[action]
+        ix_new, reward = self.move_and_reward(ix, step)
+        return reward, ix_new
