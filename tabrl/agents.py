@@ -56,6 +56,32 @@ def choose_action_double_q(ix, Qs, epsilon):
     return action
 
 
+def nstep_sarsa_update(states, actions, rewards, Q, alpha, gamma, end_state_reached):
+    """
+    n-step SARSA update
+    """
+    # Remove nan elements
+    # This happens is buffer is not filled and we have reached an end state
+    map_take = ~np.isnan(rewards)
+    states = states[map_take]
+    actions = actions[map_take]
+    rewards = rewards[map_take]
+
+    state_init, state_end = states[0], states[-1]
+    action_init, action_end = actions[0], actions[1]
+
+    buffer_size = len(rewards)
+    gamma_values = np.power(gamma, np.arange(buffer_size))
+
+    target = (rewards * gamma_values).sum()
+    target = target + np.power(gamma, buffer_size) * Q[state_end, action_end] * (1 - end_state_reached)
+
+    td_err =   - Q[state_init, action_init]
+    q_next = Q[state_init, action_init] + alpha * td_err
+    Q[state_init, action_init] = q_next
+    return Q
+    
+
 @njit
 def sarsa_update(s, a, r, s_next, a_next, Q, alpha, gamma, epsilon):
     """
