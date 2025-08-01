@@ -60,15 +60,24 @@ def nstep_sarsa_update(states, actions, rewards, Q, alpha, gamma, end_state_reac
     """
     n-step SARSA update
     """
+    Q = np.copy(Q)
     # Remove nan elements
     # This happens is buffer is not filled and we have reached an end state
-    map_take = ~np.isnan(rewards)
-    states = states[map_take]
-    actions = actions[map_take]
-    rewards = rewards[map_take]
+    map_take_rewards = ~np.isnan(rewards)
+    map_take_SA = ~np.isnan(actions)
+
+    # Return Q if all elements are NaN
+    if not map_take_rewards.any():
+        print("no update")
+        return Q
+
+    states = states[map_take_SA].astype(int)
+    actions = actions[map_take_SA].astype(int)
+    rewards = rewards[map_take_rewards]
+
 
     state_init, state_end = states[0], states[-1]
-    action_init, action_end = actions[0], actions[1]
+    action_init, action_end = actions[0], actions[-1]
 
     buffer_size = len(rewards)
     gamma_values = np.power(gamma, np.arange(buffer_size))
@@ -76,7 +85,7 @@ def nstep_sarsa_update(states, actions, rewards, Q, alpha, gamma, end_state_reac
     target = (rewards * gamma_values).sum()
     target = target + np.power(gamma, buffer_size) * Q[state_end, action_end] * (1 - end_state_reached)
 
-    td_err =   - Q[state_init, action_init]
+    td_err =  target - Q[state_init, action_init]
     q_next = Q[state_init, action_init] + alpha * td_err
     Q[state_init, action_init] = q_next
     return Q
