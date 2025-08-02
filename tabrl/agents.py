@@ -68,7 +68,6 @@ def nstep_sarsa_update(states, actions, rewards, Q, alpha, gamma, end_state_reac
 
     # Return Q if all elements are NaN
     if not map_take_rewards.any():
-        print("no update")
         return Q
 
     states = states[map_take_SA].astype(int)
