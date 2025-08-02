@@ -107,6 +107,7 @@ class WindyGridworld:
         ix_new, reward = self.move_and_reward(ix, step)
         return reward, ix_new
 
+
 @jitclass(spec_cliff)
 class CliffGridworld:
     def __init__(
