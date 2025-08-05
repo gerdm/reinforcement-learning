@@ -56,6 +56,7 @@ def choose_action_double_q(ix, Qs, epsilon):
     return action
 
 
+@njit
 def nstep_sarsa_update(states, actions, rewards, Q, alpha, gamma, end_state_reached):
     """
     n-step SARSA update
@@ -70,8 +71,8 @@ def nstep_sarsa_update(states, actions, rewards, Q, alpha, gamma, end_state_reac
     if not map_take_rewards.any():
         return Q
 
-    states = states[map_take_SA].astype(int)
-    actions = actions[map_take_SA].astype(int)
+    states = states[map_take_SA].astype(np.int32)
+    actions = actions[map_take_SA].astype(np.int32)
     rewards = rewards[map_take_rewards]
 
 
